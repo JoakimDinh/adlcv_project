@@ -16,7 +16,6 @@ from ddpm import Diffusion
 from model import Classifier 
 from util import set_seed, prepare_dataloaders
 
-
 EPOCHS = 20
 
 def create_result_folders(experiment_name):

@@ -20,7 +20,6 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s: %(message)s", level=log
 
 from ddpm import Diffusion
 from model import UNet
-import dataload
 from util import set_seed, prepare_dataloaders, CLASS_LABELS
 set_seed()
 

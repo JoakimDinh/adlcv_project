@@ -5,16 +5,20 @@ import torch
 from torch.utils.data import DataLoader, random_split
 from torchvision import transforms
 
+import yaml
 import dataload
 import numpy as np
-
-SEED = 1
-CLASS_LABELS = ["0", "1"]
-train_size = 40000
-val_size = 10000
-test_size = 1000
+#CLASS_LABELS = ['MEL', 'NV', 'BCC', 'AKIEC', 'BKL', 'DF, 'VASC']
+#CLASS_LABELS = ['ruler']
+config = yaml.safe_load(open("config.yaml"))
+data_path = config["data_path"]
+SEED = config['seed']
+CLASS_LABELS = ['MEL', 'NV', 'BCC', 'AKIEC', 'BKL', 'DF', 'VASC']
+train_size = config['lesion_train']
+val_size = config['lesion_val']
+test_size = config['lesion_test']
 DATASET_SIZE = train_size + val_size + test_size
-
+batch_size = config['batch_size']
 
 def set_seed():
     random.seed(SEED)
@@ -25,8 +29,14 @@ def set_seed():
     torch.backends.cudnn.deterministic = True
 
 
-def prepare_dataloaders(batch_size=100, val_batch_size=32, label="lesion"):
-    dataset = dataload.LesionDataset(transform=None, label=label)
+def prepare_dataloaders(batch_size=batch_size, val_batch_size=batch_size, label="lesion"):
+    dataset = dataload.LesionDataset(transform=None, data_path=data_path, label=label)
+    
+    #print(len(dataset), "images in dataset")
+    #print("Train size: ", train_size)
+    #print("Validation size: ", val_size)
+    #print("Test size: ", test_size)
+    #print("Total size: ", DATASET_SIZE)
 
     train_dataset, val_dataset, test_dataset = random_split(
         dataset,
