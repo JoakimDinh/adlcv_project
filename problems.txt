@@ -1,0 +1,3 @@
+information loss when scaling down images. 
+Images which used to contain shortcuts in some pixels have been removed because of preprocessing.
+Such as image downscaling

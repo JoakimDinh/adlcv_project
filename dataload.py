@@ -1,7 +1,7 @@
 # Files
 import os
 import sys
-import glob 
+import glob
 
 # Images
 import PIL.Image as Image
@@ -24,40 +24,63 @@ import yaml
 
 # load from config file
 config = yaml.safe_load(open("config.yaml"))
-data_path = config['data_path']
+data_path = config["data_path"]
+
 
 class LesionDataset(torch.utils.data.Dataset):
-    def __init__(self, transform, data_path=data_path):
-        'Initialization'
+    def __init__(self, transform=None, data_path=data_path, label="lesion"):
+        "Initialization"
         self.transform = transform
-        self.image_paths = sorted(glob.glob(data_path + f"/{config['images_folder']}/*.jpg"))
-        self.lesions     = pd.read_csv(data_path + f"/{config['lesion_file']}")
-        self.shortcuts   = pd.read_csv(data_path + f"/{config['shortcut_file']}")[["image","ruler"]]
+        self.label = label
+        self.image_paths = sorted(
+            glob.glob(data_path + f"/{config['images_folder']}/*.jpg")
+        )
+        if self.label == "lesion":
+            self.labels = pd.read_csv(data_path + f"/{config['lesion_file']}")
+        else:
+            self.labels = pd.read_csv(data_path + f"/{config['shortcut_file']}")[
+                ["image", "ruler"]
+            ]
+
+        if transform == None:
+            train_transform = transforms.Compose(
+                [transforms.Resize((size_h, size_w)), transforms.ToTensor()]
+            )
+            self.transform = train_transform
 
     def __len__(self):
-        'Returns the total number of samples'
+        "Returns the total number of samples"
         return len(self.image_paths)
 
     def __getitem__(self, idx):
-        'Generates one sample of data'
+        "Generates one sample of data"
         image_path = self.image_paths[idx]
-        
-        image = Image.open(image_path).convert('RGB')
+
+        image = Image.open(image_path).convert("RGB")
         X = self.transform(image)
-        Y = {'shortcut': torch.tensor(self.shortcuts.iloc[idx]['ruler']),
-             'lesion'  : torch.tensor(self.lesions[self.lesions.columns[1:]].iloc[idx].values[1:])}
+
+        if self.label == "lesion":
+            Y = torch.tensor(self.labels[self.labels.columns[1:]].iloc[idx].values[1:])
+        else:
+            Y = torch.tensor(self.labels.iloc[idx]["ruler"])
 
         return X, Y
-    
-size_w, size_h = config['size'][0], config['size'][1]
-train_transform = transforms.Compose([transforms.Resize((size_h, size_w)), 
-                                      transforms.ToTensor()])
 
-batch_size = config['batch_size']
-trainset = LesionDataset(transform=train_transform)
-train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=1)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    size_w, size_h = config["size"][0], config["size"][1]
+    train_transform = transforms.Compose(
+        [transforms.Resize((size_h, size_w)), transforms.ToTensor()]
+    )
+
+    batch_size = config["batch_size"]
+    trainset = LesionDataset(
+        transform=train_transform, data_path=data_path, label="shortcut"
+    )
+    train_loader = DataLoader(
+        trainset, batch_size=batch_size, shuffle=True, num_workers=1
+    )
+
     for i, (X, Y) in enumerate(train_loader):
         print(X.shape, Y)
         plt.imshow(X[0].permute(1, 2, 0))

@@ -1,9 +1,0 @@
-Make a dataLoader
-
-figure out what a DDIM model is
-
-make lesion classifier make it binary/multimodal
-one classifier for shortcuts
-Two classifiers
-
-
