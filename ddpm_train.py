@@ -44,14 +44,14 @@ def create_result_folders(experiment_name):
     os.makedirs(os.path.join("results", experiment_name), exist_ok=True)
 
 
-def train(T=500, cfg=True, img_size=16, input_channels=3, channels=32, 
-          time_dim=256, batch_size=100, lr=1e-3, num_epochs=30, 
+def train(T=500, cfg=True, img_size=270000, input_channels=3, channels=32, 
+          time_dim=256, batch_size=64, lr=1e-3, num_epochs=30, 
           experiment_name="DDPM-cfg", show=False, device='cpu'):
 
     create_result_folders(experiment_name)
     train_loader,_,_ = prepare_dataloaders(batch_size)
 
-    num_classes = 5 if cfg else None
+    num_classes = 2 if cfg else None
 
     model = UNet(img_size=img_size, c_in=input_channels, c_out=input_channels, 
                  num_classes=num_classes, time_dim=time_dim,channels=channels, device=device).to(device)
@@ -76,7 +76,8 @@ def train(T=500, cfg=True, img_size=16, input_channels=3, channels=32,
             if diff_type == 'DDPM-cFg':
                 # one-hot encode labels for classifier-free guidance
                 labels = labels.to(device)
-                labels = F.one_hot(labels, num_classes=num_classes).float()
+                 
+                labels = F.one_hot(labels.type(torch.long), num_classes=num_classes).float()
             else :
                 labels = None
 
@@ -87,7 +88,7 @@ def train(T=500, cfg=True, img_size=16, input_channels=3, channels=32,
             if np.random.rand() < p_uncod:
                 labels = None
 
-            t = torch.randint(0, time_dim, (images.shape[0],), device=device)
+            t = torch.randint(0, time_dim, (images.shape[0],images.shape[1]), device=device)
 
             x_t, noise = diffusion.q_sample(images, t)
 

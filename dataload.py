@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
     batch_size = config["batch_size"]
     trainset = LesionDataset(
-        transform=train_transform, data_path=data_path, label="lesion"
+        transform=train_transform, data_path=data_path, label="shortcut"
     )
     train_loader = DataLoader(
         trainset, batch_size=batch_size, shuffle=True, num_workers=1
