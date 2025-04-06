@@ -17,11 +17,35 @@ def pos_encoding(t, channels, device):
 
 
 
+#class SelfAttention(nn.Module):
+#    def __init__(self, channels, size):
+#        class SelfAttention(nn.Module):
+#        super(SelfAttention, self).__init__()
+#        self.channels = channels
+#        self.size = size
+#        self.mha = nn.MultiheadAttention(channels, 4, batch_first=True)
+#        self.ln = nn.LayerNorm([channels])
+#        self.ff_self = nn.Sequential(
+#            nn.LayerNorm([channels]),
+#            nn.Linear(channels, channels),
+#            nn.GELU(),
+#            nn.Linear(channels, channels),
+#        )
+#
+#    def forward(self, x):
+#        x = x.view(-1, self.channels, self.size * self.size).swapaxes(1, 2)
+#        x_ln = self.ln(x)
+#        attention_value, _ = self.mha(x_ln, x_ln, x_ln)
+#        attention_value = attention_value + x
+#        attention_value = self.ff_self(attention_value) + attention_value
+#        return attention_value.swapaxes(2, 1).view(-1, self.channels, self.size, self.size)
+
 class SelfAttention(nn.Module):
-    def __init__(self, channels, size):
+    def __init__(self, channels, height, width):
         super(SelfAttention, self).__init__()
         self.channels = channels
-        self.size = size
+        self.height = height
+        self.width = width
         self.mha = nn.MultiheadAttention(channels, 4, batch_first=True)
         self.ln = nn.LayerNorm([channels])
         self.ff_self = nn.Sequential(
@@ -32,13 +56,14 @@ class SelfAttention(nn.Module):
         )
 
     def forward(self, x):
-        x = x.view(-1, self.channels, self.size * self.size).swapaxes(1, 2)
+        # Flatten the spatial dimensions (height and width)
+        x = x.view(-1, self.channels, self.height * self.width).swapaxes(1, 2)
         x_ln = self.ln(x)
         attention_value, _ = self.mha(x_ln, x_ln, x_ln)
         attention_value = attention_value + x
         attention_value = self.ff_self(attention_value) + attention_value
-        return attention_value.swapaxes(2, 1).view(-1, self.channels, self.size, self.size)
-
+        # Reshape back to the original spatial dimensions
+        return attention_value.swapaxes(2, 1).view(-1, self.channels, self.height, self.width)
 
 class DoubleConv(nn.Module):
     def __init__(self, in_channels, out_channels, mid_channels=None, residual=False):
@@ -110,31 +135,31 @@ class Up(nn.Module):
         return x + emb
 
 class UNet(nn.Module):
-    def __init__(self, img_size=16, c_in=3, c_out=3, time_dim=256, device="cpu", channels=32, num_classes=None):
+    def __init__(self, image_width = 450, image_height = 600, c_in=3, c_out=3, time_dim=256, device="cpu", channels=32, num_classes=None):
         '''If num_classes is None then it is a standard UNet
            Expects one-hot encoded classes '''
         super().__init__()
         self.device = device
         self.time_dim = time_dim
         self.inc = DoubleConv(c_in, channels)
-        self.down1 = Down(channels, channels*2,  emb_dim=time_dim)
-        self.sa1 = SelfAttention(channels*2, img_size//2)
+        self.down1 = Down(channels, channels*2, emb_dim=time_dim)
+        self.sa1 = SelfAttention(channels*2, image_width*image_height)
         self.down2 = Down(channels*2, channels*4, emb_dim=time_dim)
         
-        self.sa2 = SelfAttention(channels*4, img_size // 4)
+        self.sa2 = SelfAttention(channels*4, image_width*image_height)
         self.down3 = Down(channels*4, channels*4,  emb_dim=time_dim)
-        self.sa3 = SelfAttention(channels*4, img_size // 8)
+        self.sa3 = SelfAttention(channels*4, image_width*image_height)
 
         self.bot1 = DoubleConv(channels*4, channels*8)
         self.bot2 = DoubleConv(channels*8, channels*8)
         self.bot3 = DoubleConv(channels*8, channels*4)
 
         self.up1 = Up(channels*8, channels*2,  emb_dim=time_dim)
-        self.sa4 = SelfAttention(channels*2, img_size // 4)
+        self.sa4 = SelfAttention(channels*2, image_width*image_height)
         self.up2 = Up(channels*4, channels,  emb_dim=time_dim)
-        self.sa5 = SelfAttention(channels, img_size // 2)
+        self.sa5 = SelfAttention(channels, image_width*image_height)
         self.up3 = Up(channels*2, channels,  emb_dim=time_dim)
-        self.sa6 = SelfAttention(channels, img_size)
+        self.sa6 = SelfAttention(channels, image_width*image_height)
         self.outc = nn.Conv2d(channels, c_out, kernel_size=1)
 
         if num_classes is not None:
@@ -187,18 +212,18 @@ class UNet(nn.Module):
         return output
 
 class Classifier(nn.Module):
-    def __init__(self, img_size=16, c_in=3, labels=5, time_dim=256, device="cuda", channels=32):
+    def __init__(self, image_width = 450, image_height = 600, c_in=3, labels=5, time_dim=256, device="cuda", channels=32):
         super().__init__()
         self.device = device
         self.time_dim = time_dim
         self.inc = DoubleConv(c_in, channels)
         self.down1 = Down(channels, channels*2,  emb_dim=time_dim)
-        self.sa1 = SelfAttention(channels*2, img_size//2)
+        self.sa1 = SelfAttention(channels*2, image_height // 2, image_width //2) # something about out size should be something with image size
         self.down2 = Down(channels*2, channels*4, emb_dim=time_dim)
         
-        self.sa2 = SelfAttention(channels*4, img_size // 4)
+        self.sa2 = SelfAttention(channels*4, image_height // 4, image_width // 4) 
         self.down3 = Down(channels*4, channels*4,  emb_dim=time_dim)
-        self.sa3 = SelfAttention(channels*4, img_size // 8)
+        self.sa3 = SelfAttention(channels*4, image_height // 8, image_width // 8)# something about out size should be something with image size
 
         self.bot1 = DoubleConv(channels*4, channels*8)
         self.bot2 = DoubleConv(channels*8, channels*8)
@@ -217,10 +242,10 @@ class Classifier(nn.Module):
         x3 = self.down2(x2, t)
         x3 = self.sa2(x3)
         x4 = self.down3(x3, t)
-        x4 = self.sa3(x4)
-        x4 = self.bot1(x4)
-        x4 = self.bot2(x4)
-        x4 = self.bot3(x4)
+        x5 = self.sa3(x4)
+        x6 = self.bot1(x5)
+        x7 = self.bot2(x6)
+        x8 = self.bot3(x7)
 
-        output = self.outc(x4.mean(-1).mean(-1))
+        output = self.outc(x8.mean(-1).mean(-1))
         return output
