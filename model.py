@@ -143,23 +143,23 @@ class UNet(nn.Module):
         self.time_dim = time_dim
         self.inc = DoubleConv(c_in, channels)
         self.down1 = Down(channels, channels*2, emb_dim=time_dim)
-        self.sa1 = SelfAttention(channels*2, image_width*image_height)
+        self.sa1 = SelfAttention(channels*2, image_width // 2, image_height // 2)
         self.down2 = Down(channels*2, channels*4, emb_dim=time_dim)
         
-        self.sa2 = SelfAttention(channels*4, image_width*image_height)
+        self.sa2 = SelfAttention(channels*4, image_width // 4, image_height // 4)
         self.down3 = Down(channels*4, channels*4,  emb_dim=time_dim)
-        self.sa3 = SelfAttention(channels*4, image_width*image_height)
+        self.sa3 = SelfAttention(channels*4, image_width // 8, image_height // 8)
 
         self.bot1 = DoubleConv(channels*4, channels*8)
         self.bot2 = DoubleConv(channels*8, channels*8)
         self.bot3 = DoubleConv(channels*8, channels*4)
 
         self.up1 = Up(channels*8, channels*2,  emb_dim=time_dim)
-        self.sa4 = SelfAttention(channels*2, image_width*image_height)
+        self.sa4 = SelfAttention(channels*2, image_width // 4, image_height // 4)
         self.up2 = Up(channels*4, channels,  emb_dim=time_dim)
-        self.sa5 = SelfAttention(channels, image_width*image_height)
+        self.sa5 = SelfAttention(channels, image_width // 2, image_height // 2)
         self.up3 = Up(channels*2, channels,  emb_dim=time_dim)
-        self.sa6 = SelfAttention(channels, image_width*image_height)
+        self.sa6 = SelfAttention(channels, image_width, image_height)
         self.outc = nn.Conv2d(channels, c_out, kernel_size=1)
 
         if num_classes is not None:
@@ -212,7 +212,7 @@ class UNet(nn.Module):
         return output
 
 class Classifier(nn.Module):
-    def __init__(self, image_width = 450, image_height = 600, c_in=3, labels=5, time_dim=256, device="cuda", channels=32):
+    def __init__(self, image_width = 450, image_height = 600, c_in=3, labels=2, time_dim=256, device="cuda", channels=32):
         super().__init__()
         self.device = device
         self.time_dim = time_dim
@@ -247,5 +247,5 @@ class Classifier(nn.Module):
         x7 = self.bot2(x6)
         x8 = self.bot3(x7)
 
-        output = self.outc(x8.mean(-1).mean(-1))
-        return output
+        output = self.outc(x8)
+        return output.mean(-1).mean(-1).mean(-1)

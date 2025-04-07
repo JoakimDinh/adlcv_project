@@ -60,6 +60,10 @@ class Diffusion:
         sqrt_one_minus_alpha_bar = sqrt_one_minus_alpha_bar[:, None, None, None]# match image dimensions
         
         noise = torch.normal(torch.zeros_like(x), torch.ones_like(x))
+        #print(noise.size())
+        #print(x.size())
+        #print(sqrt_alpha_bar.size())
+        #print(t.size())
         return sqrt_alpha_bar[t] * x + sqrt_one_minus_alpha_bar[t] * noise, noise
 
     def classifier_conditioning(self, x_t, t, y, mean, std, classifier_scale=1):
@@ -165,12 +169,17 @@ class Diffusion:
         else :
             return x
     
-
-    def sample_timesteps(self, batch_size, upper_limit=None):
+    def sample_timesteps(self, batch_size, upper_limit=None, image_width=None, image_height=None):
         """
         Sample timesteps uniformly for training
         """
         if upper_limit is None:
-            return torch.randint(low=1, high=self.T, size=(batch_size,), device=self.device)
+            timesteps = torch.randint(low=1, high=self.T, size=(batch_size,), device=self.device)
         else :
-            return torch.randint(low=1, high=upper_limit, size=(batch_size,), device=self.device)
+            timesteps = torch.randint(low=1, high=upper_limit, size=(batch_size,), device=self.device)
+
+        #if image_width is not None and image_height is not None:
+        #    # Expand timesteps to match the spatial dimensions of the images
+        #    timesteps = timesteps[:, None, None].expand(-1, image_width, image_height)
+
+        return timesteps

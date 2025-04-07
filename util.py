@@ -8,13 +8,12 @@ from torchvision import transforms
 import yaml
 import dataload
 import numpy as np
-#CLASS_LABELS = ['MEL', 'NV', 'BCC', 'AKIEC', 'BKL', 'DF, 'VASC']
-#CLASS_LABELS = ['ruler']
 config = yaml.safe_load(open("config.yaml"))
 data_path = config["data_path"]
 SEED = config['seed']
-CLASS_LABELS = ['MEL', 'NV', 'BCC', 'AKIEC', 'BKL', 'DF', 'VASC']
 train_size = config['lesion_train']
+#CLASS_LABELS = ['MEL', 'NV', 'BCC', 'AKIEC', 'BKL', 'DF, 'VASC']
+CLASS_LABELS = ['ruler']
 val_size = config['lesion_val']
 test_size = config['lesion_test']
 DATASET_SIZE = train_size + val_size + test_size
@@ -29,7 +28,7 @@ def set_seed():
     torch.backends.cudnn.deterministic = True
 
 
-def prepare_dataloaders(batch_size=batch_size, val_batch_size=batch_size, label="lesion"):
+def prepare_dataloaders(batch_size=batch_size, val_batch_size=batch_size, label="shortcut"):
     dataset = dataload.LesionDataset(transform=None, data_path=data_path, label=label)
     
     #print(len(dataset), "images in dataset")

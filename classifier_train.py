@@ -27,12 +27,12 @@ def train(device='cpu', T=500, image_width = 450, image_height = 600, input_chan
 
     exp_name = 'classifier'
     create_result_folders(exp_name)
-    train_loader, val_loader, _  = prepare_dataloaders()
+    train_loader, val_loader, _  = prepare_dataloaders(label='shortcut')
 
     diffusion = Diffusion(image_width = image_width, image_height = image_height, T=T, beta_start=1e-4, beta_end=0.02, device=device)
 
 
-    model = Classifier(image_width = image_width, image_height = image_height, c_in=input_channels, labels=1, 
+    model = Classifier(image_width = image_width, image_height = image_height, c_in=input_channels, labels=2, 
         time_dim=time_dim,channels=channels, device=device
     )
     model.to(device)
@@ -54,10 +54,14 @@ def train(device='cpu', T=500, image_width = 450, image_height = 600, input_chan
 
             # Do not forget to noise your images !
             optimizer.zero_grad()
-            t = diffusion.sample_timesteps(images.shape[1]).to(device).long()
+            t = diffusion.sample_timesteps(batch_size=images.shape[0], 
+                                           image_width=image_width,
+                                           image_height=image_height).to(device).long() 
             x_t, noise = diffusion.q_sample(images, t)
             logits = model(x_t, t)
             #out = softmax(logits)
+            #print(logits.size())
+            #print(labels.size())
             loss = loss_fn(logits, labels)
             loss.backward()
             optimizer.step()
