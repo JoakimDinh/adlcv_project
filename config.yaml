@@ -11,7 +11,7 @@ lesion_file:   "labels_B.csv"
 shortcut_file: "shortcuts_B.csv" 
 
 # New image size
-size: [300, 225]
+size: [240, 180]
 
 # Train_size
 lesion_train: 7000
